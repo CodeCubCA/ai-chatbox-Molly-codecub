@@ -11,7 +11,7 @@ client = Groq(api_key=os.getenv("GROQ_API_KEY"))
 
 # Page configuration with gaming theme
 st.set_page_config(
-    page_title="My gaming AI assistant",
+    page_title="Gaming Assistant",
     page_icon="🎮",
     layout="wide"
 )
@@ -30,7 +30,7 @@ st.markdown("""
     """, unsafe_allow_html=True)
 
 # App title and description
-st.title("🎮 My gaming AI assistant")
+st.title("🎮 Gaming Assistant")
 st.markdown("""
 ### 👋 Welcome, Gamer!
 I'm your personal gaming AI assistant, here to help you level up your gaming experience! Whether you need:
