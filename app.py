@@ -1,13 +1,13 @@
 import streamlit as st
 import os
-from groq import Groq
+import google.generativeai as genai
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
 load_dotenv()
 
-# Initialize Groq client with API key from environment variable
-client = Groq(api_key=os.getenv("GROQ_API_KEY"))
+# Initialize Gemini client with API key from environment variable
+genai.configure(api_key=os.getenv("GEMINI_API_KEY"))
 
 # Page configuration with gaming theme
 st.set_page_config(
@@ -77,41 +77,42 @@ if prompt := st.chat_input("Ask me anything about gaming..."):
 
         system_prompt = f"{personality_prompts[st.session_state.personality]} You provide tips, strategies, game recommendations, and answer questions about video games."
 
-        api_messages = [
-            {
-                "role": "system",
-                "content": system_prompt
-            }
-        ]
+        # Build conversation history for Gemini including system prompt
+        conversation_history = []
 
-        # Add chat history to API messages
-        for msg in st.session_state.messages:
-            api_messages.append({
-                "role": msg["role"],
-                "content": msg["content"]
-            })
+        # Add system prompt as first user message if history is empty
+        if len(st.session_state.messages) == 1:  # Only current message
+            conversation_history.append({"role": "user", "parts": [system_prompt]})
+            conversation_history.append({"role": "model", "parts": ["Understood! I'm ready to be your gaming assistant with that personality. What would you like to know about gaming?"]})
 
-        # Stream response from Groq API
+        for msg in st.session_state.messages[:-1]:  # Exclude the current user message
+            if msg["role"] == "user":
+                conversation_history.append({"role": "user", "parts": [msg["content"]]})
+            else:
+                conversation_history.append({"role": "model", "parts": [msg["content"]]})
+
+        # Stream response from Gemini API
         try:
-            stream = client.chat.completions.create(
-                model="llama-3.3-70b-versatile",
-                messages=api_messages,
-                temperature=0.7,
-                max_tokens=1024,
-                stream=True
-            )
+            # Initialize the model
+            model = genai.GenerativeModel("gemini-2.0-flash")
+
+            # Start chat with history
+            chat = model.start_chat(history=conversation_history)
+
+            # Send message and stream response
+            response = chat.send_message(prompt, stream=True)
 
             # Display streaming response
-            for chunk in stream:
-                if chunk.choices[0].delta.content:
-                    full_response += chunk.choices[0].delta.content
+            for chunk in response:
+                if chunk.text:
+                    full_response += chunk.text
                     message_placeholder.markdown(full_response + "▌")
 
             # Display final response
             message_placeholder.markdown(full_response)
 
         except Exception as e:
-            full_response = f"❌ Error: {str(e)}\n\nPlease check your GROQ_API_KEY in the .env file."
+            full_response = f"❌ Error: {str(e)}\n\nPlease check your GEMINI_API_KEY in the .env file."
             message_placeholder.markdown(full_response)
 
     # Add assistant response to chat history
@@ -150,7 +151,7 @@ with st.sidebar:
     st.header("ℹ️ About")
     st.markdown("""
     This is a gaming AI assistant powered by:
-    - **Groq API** (llama-3.3-70b-versatile)
+    - **Google Gemini API** (gemini-2.0-flash)
     - **Streamlit** for the interface
 
     Ask me about:
